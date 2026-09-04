@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <title>Income Farm</title>
+  <meta name="description" content="활동 내역과 예상 수입을 컬러 블록으로 쌓아 보는 게임형 수입 대시보드">
+  <meta name="theme-color" content="#0f0c29">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Income Farm">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="stars"></div>
+  </div>
+
+  <div class="app">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon" id="level-emoji">🌱</span>
+        <div class="brand-text">
+          <h1>Income Farm</h1>
+          <span class="brand-sub"><span id="level-title">씨앗</span> · Lv.<span id="level-num">1</span></span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-sound" class="icon-btn" aria-label="사운드 켜기/끄기" title="사운드">🔊</button>
+        <button id="btn-install" class="icon-btn install-btn" aria-label="앱으로 설치" title="앱으로 설치">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="2.5" width="12" height="19" rx="2.5"/>
+            <path d="M12 7v6M9.5 10.5 12 13l2.5-2.5"/>
+            <circle cx="12" cy="18" r=".9" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="install-dot"></span>
+        </button>
+        <button id="btn-menu" class="icon-btn" aria-label="메뉴" title="메뉴">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="scoreboard" id="scoreboard">
+      <div class="score-main">
+        <div class="score-label">누적 예상 수입 <span class="chip" id="period-label">전체</span></div>
+        <div class="score-value" id="score-value"><span id="score-total">0</span><span class="won">원</span></div>
+        <div class="score-sub">
+          <span>🧱 <b id="score-count">0</b>개 블록</span>
+          <span class="dot">·</span>
+          <span>🔥 <b id="streak">0</b>일 연속</span>
+        </div>
+      </div>
+      <div class="goal">
+        <div class="goal-head">
+          <span>이번 달 목표</span>
+          <button id="btn-goal" class="link-btn">설정</button>
+        </div>
+        <div class="goal-bar"><div id="goal-fill" class="goal-fill"></div><div class="goal-shine"></div></div>
+        <div class="goal-text"><b id="goal-pct">0%</b><span id="goal-remain">목표를 설정해 보세요</span></div>
+      </div>
+    </section>
+
+    <nav class="period-tabs" id="period-tabs" aria-label="기간 필터">
+      <button data-period="all" class="active">전체</button>
+      <button data-period="today">오늘</button>
+      <button data-period="week">이번 주</button>
+      <button data-period="month">이번 달</button>
+      <span class="tab-indicator"></span>
+    </nav>
+
+    <main class="board">
+      <section class="tower-wrap" id="tower-wrap">
+        <div class="tower-sky"></div>
+        <div id="tower" class="tower"></div>
+        <div class="ground"><div class="grass"></div></div>
+        <div id="empty-hint" class="empty-hint">
+          <div class="hint-emoji">🌱</div>
+          <p>첫 블록을 쌓아보세요!</p>
+          <small>아래 <b>+</b> 버튼으로 활동을 추가하면<br>여기에 컬러 블록이 쌓입니다</small>
+        </div>
+        <div class="hold-hint">블록을 <b>3초</b>간 꾹 누르면 파괴됩니다</div>
+      </section>
+
+      <aside class="side" id="side">
+        <div class="card">
+          <h3>최근 7일</h3>
+          <div class="spark" id="spark"></div>
+          <div class="insight" id="insight"></div>
+        </div>
+        <div class="card">
+          <h3>카테고리</h3>
+          <div id="cat-breakdown" class="cat-breakdown"></div>
+        </div>
+        <div class="card">
+          <h3>최근 활동</h3>
+          <ul id="history" class="history"></ul>
+        </div>
+      </aside>
+    </main>
+
+    <button id="fab" class="fab" aria-label="활동 추가">
+      <span class="fab-plus">+</span>
+      <span class="fab-ring"></span>
+    </button>
+  </div>
+
+  <div id="scrim" class="scrim"></div>
+
+  <!-- 추가 / 수정 시트 -->
+  <div id="sheet-add" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <form id="form-add" autocomplete="off">
+      <div class="sheet-handle"></div>
+      <h2 id="sheet-title">활동 추가</h2>
+      <label class="field">
+        <span>활동 내용</span>
+        <input id="in-name" type="text" required maxlength="40" placeholder="예: 로고 디자인 외주, 강의 1회차">
+      </label>
+      <label class="field">
+        <span>예상 수입 (원)</span>
+        <div class="amount-wrap">
+          <input id="in-amount" type="text" inputmode="numeric" required placeholder="0">
+          <span class="amount-unit">원</span>
+        </div>
+      </label>
+      <div class="quick-amts">
+        <button type="button" data-add="10000">+1만</button>
+        <button type="button" data-add="50000">+5만</button>
+        <button type="button" data-add="100000">+10만</button>
+        <button type="button" data-add="500000">+50만</button>
+        <button type="button" data-add="1000000">+100만</button>
+        <button type="button" data-add="0" class="clear">지우기</button>
+      </div>
+      <div class="field">
+        <span>카테고리</span>
+        <div class="cat-picker" id="cat-picker"></div>
+      </div>
+      <div class="row">
+        <label class="field">
+          <span>날짜</span>
+          <input id="in-date" type="date">
+        </label>
+        <label class="field">
+          <span>메모</span>
+          <input id="in-memo" type="text" maxlength="60" placeholder="선택">
+        </label>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" id="btn-delete" class="btn danger" hidden>🗑 파괴</button>
+        <button type="button" id="btn-cancel" class="btn ghost">취소</button>
+        <button type="submit" id="btn-submit" class="btn primary">🧱 블록 쌓기</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 메뉴 시트 -->
+  <div id="sheet-menu" class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <h2>메뉴</h2>
+    <ul class="menu-list">
+      <li><button id="m-goal">🎯 <span>이번 달 목표 설정</span></button></li>
+      <li><button id="m-share">📤 <span>요약 공유하기</span></button></li>
+      <li><button id="m-export">💾 <span>데이터 내보내기 (JSON)</span></button></li>
+      <li><button id="m-import">📥 <span>데이터 가져오기</span></button></li>
+      <li><button id="m-install">📱 <span>앱으로 설치</span></button></li>
+      <li><button id="m-sample">✨ <span>샘플 데이터 넣어보기</span></button></li>
+      <li><button id="m-reset" class="danger">🧨 <span>전체 초기화</span></button></li>
+    </ul>
+    <p class="menu-foot">Income Farm <span id="app-version"></span> · 데이터는 이 기기에만 저장됩니다</p>
+    <input type="file" id="file-import" accept="application/json,.json" hidden>
+  </div>
+
+  <!-- 목표 시트 -->
+  <div id="sheet-goal" class="sheet" role="dialog" aria-modal="true">
+    <form id="form-goal">
+      <div class="sheet-handle"></div>
+      <h2>🎯 이번 달 목표</h2>
+      <label class="field">
+        <span>목표 금액 (원)</span>
+        <div class="amount-wrap">
+          <input id="in-goal" type="text" inputmode="numeric" placeholder="예: 3,000,000">
+          <span class="amount-unit">원</span>
+        </div>
+      </label>
+      <div class="quick-amts">
+        <button type="button" data-goal="1000000">100만</button>
+        <button type="button" data-goal="3000000">300만</button>
+        <button type="button" data-goal="5000000">500만</button>
+        <button type="button" data-goal="10000000">1,000만</button>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" data-close>취소</button>
+        <button type="submit" class="btn primary">저장</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 설치 안내 시트 -->
+  <div id="sheet-install" class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <h2>📱 앱으로 설치하기</h2>
+    <div id="install-guide" class="install-guide"></div>
+    <div class="sheet-actions">
+      <button type="button" class="btn primary" data-close>확인</button>
+    </div>
+  </div>
+
+  <!-- 레벨업 오버레이 -->
+  <div id="levelup" class="levelup" aria-live="polite">
+    <div class="levelup-card">
+      <div class="levelup-emoji" id="levelup-emoji">🌱</div>
+      <div class="levelup-title">LEVEL UP!</div>
+      <div class="levelup-sub" id="levelup-sub">새싹 농장이 되었어요</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

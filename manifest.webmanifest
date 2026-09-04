@@ -1,0 +1,25 @@
+{
+  "name": "Income Farm",
+  "short_name": "Income Farm",
+  "description": "활동 내역과 예상 수입을 컬러 블록으로 쌓아 보는 게임형 수입 대시보드",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0f0c29",
+  "theme_color": "#0f0c29",
+  "lang": "ko",
+  "dir": "ltr",
+  "categories": ["finance", "productivity", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "활동 추가", "short_name": "추가", "description": "새 활동 블록을 바로 쌓기", "url": "./?action=add", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
