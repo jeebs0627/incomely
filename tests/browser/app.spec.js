@@ -47,6 +47,33 @@ test('local record survives reload and cancelled import changes nothing', async 
   await expect(page.locator('.block')).toHaveCount(1); await expect(page.locator('.b-name')).toHaveText('새 기록');
 });
 
+test('phone rows separate long names and large amounts with stable varied styles', async ({ page }) => {
+  await seed(page, Array.from({ length: 24 }, (_, i) => ({ ...entry('phone-' + i, 9999999999), name: '아주 긴 활동 이름과 금액이 서로 겹치지 않아야 하는 블록', paid: true })));
+  await page.setViewportSize({ width: 320, height: 740 }); await page.goto('/');
+  const looks = () => page.locator('.block').evaluateAll(nodes => nodes.map(n => [n.className.replace(/ rise| drop/g, ''), n.style.getPropertyValue('--c')]));
+  const before = await looks();
+  expect(new Set(before.map(x => x[0])).size).toBeGreaterThan(1);
+  expect(new Set(before.map(x => x[1])).size).toBeGreaterThan(1);
+  for (const width of [320, 390, 650]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const density of ['compact', 'comfortable']) {
+      await page.locator('#density').selectOption(density);
+      const layout = await page.locator('.block').first().evaluate(n => {
+        const rect = s => n.querySelector(s).getBoundingClientRect();
+        const name = rect('.b-name'), amount = rect('.b-amt'), mark = rect('.paid-mark'), block = n.getBoundingClientRect();
+        return { columns: getComputedStyle(n.parentElement).gridTemplateColumns.split(' ').length,
+          separated: name.right <= amount.left && amount.right <= mark.left,
+          contained: amount.right <= block.right && amount.top >= block.top && amount.bottom <= block.bottom,
+          amountFits: n.querySelector('.b-amt').scrollWidth <= n.querySelector('.b-amt').clientWidth };
+      });
+      expect(layout).toEqual({ columns: 1, separated: true, contained: true, amountFits: true });
+    }
+  }
+  await page.reload(); expect(await looks()).toEqual(before);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.locator('#density').selectOption('compact');
+  await page.locator('#tower-wrap').screenshot({ path: 'artifacts/mobile-rows.png' });
+});
+
 async function mockCloud(context, server, user = 'user-1') {
   await context.addInitScript(({ user }) => {
     localStorage.setItem('incomefarm:motion', 'off');

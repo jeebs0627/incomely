@@ -86,3 +86,14 @@ body.reduced-motion *,body.reduced-motion *::before,body.reduced-motion *::after
 @media(max-width:650px) { .app { padding:calc(14px + var(--safe-top)) 14px calc(90px + var(--safe-bottom)); gap:16px; }.app-header { padding-bottom:14px; }.brand h1 { font-size:17px; }.brand-icon { width:36px; height:36px; }.brand-sub { font-size:10px; }.header-actions { gap:5px; }.icon-btn { width:34px; height:34px; border-radius:10px; }.account-btn { padding:9px; }.account-btn #sync-label { display:none; }.page-heading { margin-top:4px; }.page-heading h2 { font-size:21px; }.page-heading p { font-size:11px; }.eyebrow { font-size:9px; letter-spacing:1.6px; }.scoreboard { padding:22px; grid-template-columns:1fr; gap:21px; }.score-value { font-size:38px; }.score-sub { font-size:11px; }.goal-head,.goal-text { font-size:11px; }.workspace-toolbar { align-items:stretch; flex-wrap:wrap; }.period-tabs { width:100%; }.view-options { margin-left:auto; }.board { grid-template-columns:1fr; }.tower-wrap { min-height:395px; }.board-heading { padding:18px 16px 12px; }.filters { padding:0 14px 14px; }.filters input { flex-basis:100%; }.filters select { flex:1; padding:9px 5px; font-size:11px; }.tower { grid-template-columns:repeat(auto-fill,minmax(105px,1fr)); gap:8px; padding:14px; min-height:240px; max-height:530px; }.block { padding:7px 8px; height:72px !important; }.block .b-amt { font-size:14px; }.side { display:grid; grid-template-columns:1fr 1fr; gap:12px; }.card { padding:15px; }.harvest-card strong { font-size:22px; }.side .card:last-child { grid-column:1/-1; }.fab { right:20px; }.filters input,.field select { font-size:16px; } }
 @media(max-width:360px) { .brand-icon { display:none; }.side { grid-template-columns:1fr; }.page-heading h2 { font-size:18px; }.tower { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:650px) { .scoreboard { padding:16px 20px; gap:14px; }.score-value { font-size:34px; margin:7px 0; }.goal-bar { margin:8px 0; }.page-heading p { display:none; }.page-heading h2 { font-size:19px; margin-bottom:0; } }
+
+/* Phone: one block per row; reserve independent columns for name and amount. */
+@media(max-width:650px) {
+  .tower, .tower[data-density=comfortable] { grid-template-columns:minmax(0,1fr); gap:8px; }
+  .tower .block { height:48px !important; grid-template-columns:20px minmax(0,1fr) max-content 14px; grid-template-rows:minmax(0,1fr); gap:8px; padding:8px 10px; align-items:center; }
+  .tower[data-density=comfortable] .block { height:60px !important; }
+  .block .b-name { grid-column:2; grid-row:1; font-size:12px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .block .b-amt { grid-column:3; grid-row:1; font-size:13px; letter-spacing:-.3px; line-height:1.4; white-space:nowrap; }
+  .block .b-emoji { grid-column:1; grid-row:1; }
+  .block .paid-mark { position:static; grid-column:4; grid-row:1; }
+}

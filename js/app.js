@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '2.0.0';
+  const APP_VERSION = '2.1.0';
   const STORAGE_KEY = 'incomefarm:v1';
   const HOLD_MS = 3000;
   const TAP_MS = 320;
@@ -36,6 +36,18 @@
   ];
   const PERIOD_LABEL = { all: '전체', today: '오늘', week: '이번 주', month: '이번 달' };
   const TINTS = { lilac: '#c4b5ed', mint: '#9fdcc4', sky: '#91cce0', peach: '#eebc97', lemon: '#f3d588', rose: '#f0b3bd' };
+  const SKINS = ['soft', 'pixel', 'stripe', 'gem'];
+  function appearance(entry) {
+    if (entry.visualVersion === 1) return { skin: entry.skin, tint: entry.tint };
+    // Stable pseudo-random appearance for existing records, identical on every device.
+    const hash = salt => {
+      let h = 2166136261;
+      for (const ch of salt + entry.id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+      h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
+      return h >>> 0;
+    };
+    return { skin: SKINS[hash('skin') % SKINS.length], tint: Object.keys(TINTS)[hash('tint') % Object.keys(TINTS).length] };
+  }
 
   // ---------- state ----------
   const defaults = () => ({ entries: [], goal: 0, sound: true, period: 'all', goalCelebrated: '', lastCat: 'freelance' });
@@ -349,12 +361,13 @@
   // ============================================================
   function makeBlock(e) {
     const c = catOf(e.cat), h = blockHeight(e.amount);
+    const look = appearance(e);
     const b = document.createElement('div');
-    b.className = 'block skin-' + (e.skin || 'soft');
+    b.className = 'block skin-' + (look.skin || 'soft');
     b.tabIndex = 0; b.setAttribute('role', 'button');
     b.setAttribute('aria-label', `${e.name}, ${fmt(e.amount)}원, ${e.paid ? '입금 완료' : '입금 대기'}, 수정`);
     b.dataset.id = e.id;
-    b.style.setProperty('--c', TINTS[e.tint] || c.color);
+    b.style.setProperty('--c', TINTS[look.tint] || c.color);
     b.style.height = h + 'px';
     b.title = `${e.name} · ${fmt(e.amount)}원${e.memo ? ' · ' + e.memo : ''}`;
     b.innerHTML = `<span class="b-emoji">${c.emoji}</span><span class="b-name">${esc(e.name)}</span><span class="b-amt">${fmt(e.amount)}<small>원</small></span>${e.paid ? '<span class="paid-mark" aria-hidden="true">✓</span>' : ''}<div class="b-hold"></div>`;
@@ -511,7 +524,7 @@
 
   function shatter(b, entry) {
     if (reducedMotion()) { b.remove(); return; }
-    const color = TINTS[entry.tint] || catOf(entry.cat).color;
+    const color = TINTS[appearance(entry).tint] || catOf(entry.cat).color;
     const r = b.getBoundingClientRect(), wr = el.towerWrap.getBoundingClientRect();
     const cols = 4, rows = clamp(Math.round(r.height / 20), 2, 6);
     const w = r.width / cols, h = r.height / rows;
@@ -610,7 +623,9 @@
     editingId = null; selectedCat = state.lastCat || 'freelance'; syncCat();
     el.sheetTitle.textContent = '활동 추가'; el.btnSubmit.textContent = '🧱 블록 쌓기'; el.btnDelete.hidden = true;
     el.form.reset(); el.inDate.value = todayStr();
-    $('#in-skin').value = ['soft', 'pixel', 'stripe', 'gem'][state.entries.length % 4];
+    const picks = crypto.getRandomValues(new Uint32Array(2));
+    $('#in-skin').value = SKINS[picks[0] % SKINS.length];
+    $('#in-tint').value = Object.keys(TINTS)[picks[1] % Object.keys(TINTS).length];
     openSheet(el.sheetAdd);
     setTimeout(() => el.inName.focus({ preventScroll: true }), 350);
   }
@@ -621,8 +636,9 @@
     editingSnapshot = JSON.stringify(e);
     el.sheetTitle.textContent = '블록 수정'; el.btnSubmit.textContent = '💾 저장'; el.btnDelete.hidden = false;
     el.inName.value = e.name; el.inAmount.value = fmt(e.amount); el.inDate.value = e.date; el.inMemo.value = e.memo || '';
-    $('#in-skin').value = e.skin || 'soft'; $('#in-paid').value = e.paid ? 'paid' : 'pending';
-    $('#in-tint').value = e.tint || 'category';
+    const look = appearance(e);
+    $('#in-skin').value = look.skin || 'soft'; $('#in-paid').value = e.paid ? 'paid' : 'pending';
+    $('#in-tint').value = look.tint || 'category';
     openSheet(el.sheetAdd);
   }
   el.form.addEventListener('submit', ev => {
@@ -637,8 +653,8 @@
     const paid = $('#in-paid').value === 'paid', skin = $('#in-skin').value, tint = $('#in-tint').value;
     try { FarmData.clean({ entries: [{ id: editingId || uid(), name, amount, date, memo }], goal: 0 }); } catch (error) { toast(error.message); return; }
     closeSheet();
-    if (editingId) updateEntry(editingId, { name, amount, date, memo, paid, skin, tint, cat: selectedCat });
-    else addEntry({ id: uid(), name, amount, date, memo, paid, skin, tint, cat: selectedCat, createdAt: Date.now() });
+    if (editingId) updateEntry(editingId, { name, amount, date, memo, paid, skin, tint, visualVersion: 1, cat: selectedCat });
+    else addEntry({ id: uid(), name, amount, date, memo, paid, skin, tint, visualVersion: 1, cat: selectedCat, createdAt: Date.now() });
   });
   el.btnCancel.addEventListener('click', closeSheet);
   el.btnDelete.addEventListener('click', () => { const id = editingId; closeSheet(); if (id) setTimeout(() => destroyBlock(id), 200); });

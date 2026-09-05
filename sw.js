@@ -1,5 +1,5 @@
 /* Income Farm service worker — offline-first app shell */
-const VERSION = 'income-farm-v2.0.0';
+const VERSION = 'income-farm-v2.1.0';
 const SHELL = [
   './',
   './index.html',

@@ -17,7 +17,8 @@
         memo: String(e.memo || '').slice(0, 60), cat: categories.includes(e.cat) ? e.cat : 'other',
         createdAt: Number.isFinite(e.createdAt) ? e.createdAt : 0,
         paid: e.paid === true, skin: ['soft', 'pixel', 'stripe', 'gem'].includes(e.skin) ? e.skin : 'soft',
-        tint: ['lilac', 'mint', 'sky', 'peach', 'lemon', 'rose'].includes(e.tint) ? e.tint : 'category' };
+        tint: ['lilac', 'mint', 'sky', 'peach', 'lemon', 'rose'].includes(e.tint) ? e.tint : 'category',
+        visualVersion: e.visualVersion === 1 ? 1 : 0 };
     });
     const goal = raw.goal ?? 0;
     if (!Number.isSafeInteger(goal) || goal < 0 || goal > 9999999999) throw new Error('목표 금액을 확인해 주세요');
