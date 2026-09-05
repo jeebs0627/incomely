@@ -1,0 +1,12 @@
+{
+  "name": "income-farm",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/serve.js",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "playwright test",
+    "check": "node --check js/app.js && node --check js/cloud.js && node --check js/data.js && node --check api/config.js"
+  },
+  "devDependencies": { "@playwright/test": "^1.55.0" }
+}

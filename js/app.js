@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '2.0.0';
   const STORAGE_KEY = 'incomefarm:v1';
   const HOLD_MS = 3000;
   const TAP_MS = 320;
@@ -14,12 +14,12 @@
 
   // ---------- constants ----------
   const CATEGORIES = [
-    { id: 'freelance', name: '프리랜스', emoji: '💼', color: '#ff6b6b' },
-    { id: 'lecture',   name: '강의/코칭', emoji: '🎤', color: '#feca57' },
-    { id: 'sales',     name: '판매',     emoji: '🛍️', color: '#48dbfb' },
-    { id: 'content',   name: '콘텐츠',   emoji: '🎬', color: '#ff9ff3' },
-    { id: 'invest',    name: '투자',     emoji: '📈', color: '#1dd1a1' },
-    { id: 'parttime',  name: '알바',     emoji: '⏰', color: '#54a0ff' },
+    { id: 'freelance', name: '프리랜스', emoji: '💼', color: '#c4b5ed' },
+    { id: 'lecture',   name: '강의/코칭', emoji: '🎤', color: '#f3d588' },
+    { id: 'sales',     name: '판매',     emoji: '🛍️', color: '#91cce0' },
+    { id: 'content',   name: '콘텐츠',   emoji: '🎬', color: '#f0b3bd' },
+    { id: 'invest',    name: '투자',     emoji: '📈', color: '#b5d996' },
+    { id: 'parttime',  name: '알바',     emoji: '⏰', color: '#99bdeb' },
     { id: 'other',     name: '기타',     emoji: '🌟', color: '#c8d6e5' },
   ];
   const LEVELS = [
@@ -35,18 +35,31 @@
     { min: 50000000,  title: '전설의 농부', emoji: '👑' },
   ];
   const PERIOD_LABEL = { all: '전체', today: '오늘', week: '이번 주', month: '이번 달' };
+  const TINTS = { lilac: '#c4b5ed', mint: '#9fdcc4', sky: '#91cce0', peach: '#eebc97', lemon: '#f3d588', rose: '#f0b3bd' };
 
   // ---------- state ----------
   const defaults = () => ({ entries: [], goal: 0, sound: true, period: 'all', goalCelebrated: '', lastCat: 'freelance' });
   let state = load();
+  let query = '', categoryFilter = 'all', paidFilter = 'all', sortOrder = 'newest';
+  let motionOff = localStorage.getItem('incomefarm:motion') === 'off';
+  const reducedMotion = () => motionOff || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (s && Array.isArray(s.entries)) return { ...defaults(), ...s };
+      if (s && Array.isArray(s.entries)) return { ...defaults(), ...s, ...FarmData.clean(s) };
     } catch (_) { /* ignore */ }
     return defaults();
   }
-  function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) { /* ignore */ } }
+  function save() {
+    try {
+      if (FarmCloud.signedIn) FarmCloud.save(state);
+      else localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) { toast(error.message || '저장 공간이 부족해요. JSON으로 기록을 백업해 주세요', { duration: 6000 }); }
+  }
+  function canEdit() {
+    if (FarmCloud.canEdit) return true;
+    toast('계정 메뉴에서 동기화 상태를 확인해 주세요'); return false;
+  }
 
   // ---------- helpers ----------
   const fmt = n => Math.round(n).toLocaleString('ko-KR');
@@ -80,10 +93,12 @@
     }
     return true;
   }
-  const filtered = () => state.entries.filter(e => inPeriod(e, state.period));
+  const matches = e => inPeriod(e, state.period) && (categoryFilter === 'all' || e.cat === categoryFilter) &&
+    (paidFilter === 'all' || (paidFilter === 'paid' ? e.paid : !e.paid)) && (!query || `${e.name} ${e.memo || ''}`.toLocaleLowerCase().includes(query));
+  const filtered = () => state.entries.filter(matches).sort((a, b) => sortOrder === 'amount' ? b.amount - a.amount : sortOrder === 'oldest' ? a.date.localeCompare(b.date) || a.createdAt - b.createdAt : b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
   const monthEntries = () => state.entries.filter(e => inPeriod(e, 'month'));
   const levelIndex = total => { let i = 0; LEVELS.forEach((l, k) => { if (total >= l.min) i = k; }); return i; };
-  const blockHeight = amount => Math.round(clamp(36 + Math.log10(amount / 1000 + 1) * 27, 36, 118));
+  const blockHeight = () => 76;
 
   function streak() {
     const days = new Set(state.entries.map(e => e.date));
@@ -193,6 +208,7 @@
     const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
     return {
       burst(x, y, color, n = 26) {
+        if (reducedMotion()) return;
         for (let i = 0; i < n; i++) {
           const a = Math.random() * Math.PI * 2, s = 3 + Math.random() * 7;
           parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 3, g: .35, drag: .96, rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
@@ -201,6 +217,7 @@
         kick();
       },
       sparkle(x, y, color, n = 10) {
+        if (reducedMotion()) return;
         for (let i = 0; i < n; i++) {
           const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 3;
           parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, g: .08, drag: .97, rot: 0, vr: 0,
@@ -209,6 +226,7 @@
         kick();
       },
       confetti(n = 120) {
+        if (reducedMotion()) return;
         const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#1dd1a1', '#54a0ff', '#a8ff78', '#ffd166'];
         for (let i = 0; i < n; i++) {
           parts.push({ x: Math.random() * W, y: -20 - Math.random() * H * .3, vx: (Math.random() - .5) * 3, vy: 2 + Math.random() * 4, g: .06, drag: .995,
@@ -240,20 +258,33 @@
   // ============================================================
   // Sheets
   // ============================================================
-  let openSheetEl = null;
+  let openSheetEl = null, previousFocus = null;
+  $$('.sheet').forEach(sheet => { sheet.inert = true; });
   function openSheet(sheet) {
-    if (openSheetEl && openSheetEl !== sheet) openSheetEl.classList.remove('open');
+    if (!openSheetEl) previousFocus = document.activeElement;
+    if (openSheetEl && openSheetEl !== sheet) { openSheetEl.classList.remove('open'); openSheetEl.inert = true; }
+    sheet.inert = false;
     openSheetEl = sheet; sheet.classList.add('open'); el.scrim.classList.add('show'); el.fab.classList.add('hide');
+    $('.app').inert = true;
+    setTimeout(() => { if (openSheetEl === sheet) sheet.querySelector('input,button,select')?.focus({ preventScroll: true }); }, 50);
     sfx.whoosh();
   }
   function closeSheet() {
-    if (openSheetEl) openSheetEl.classList.remove('open');
+    if (openSheetEl) { openSheetEl.classList.remove('open'); openSheetEl.inert = true; }
     openSheetEl = null; el.scrim.classList.remove('show'); el.fab.classList.remove('hide');
-    document.activeElement && document.activeElement.blur();
+    $('.app').inert = false;
+    previousFocus?.focus({ preventScroll: true });
   }
   el.scrim.addEventListener('click', closeSheet);
   $$('[data-close]').forEach(b => b.addEventListener('click', closeSheet));
   window.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+  window.addEventListener('keydown', e => {
+    if (!openSheetEl || e.key !== 'Tab') return;
+    const focusable = $$('button,input,select,[tabindex="0"]', openSheetEl).filter(n => !n.disabled && n.getClientRects().length);
+    const first = focusable[0], last = focusable.at(-1);
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+  });
 
   // ============================================================
   // Score / level / goal rendering
@@ -261,6 +292,7 @@
   let displayedTotal = 0, tweenRaf = 0;
   function tweenTo(target) {
     cancelAnimationFrame(tweenRaf);
+    if (reducedMotion()) { displayedTotal = target; el.scoreTotal.textContent = fmt(target); return; }
     const from = displayedTotal, diff = target - from, t0 = performance.now(), dur = clamp(Math.abs(diff) / 2000, 400, 1100);
     if (!diff) { el.scoreTotal.textContent = fmt(target); return; }
     const step = now => {
@@ -295,6 +327,11 @@
 
     // goal (this month)
     const m = sum(monthEntries());
+    $('#paid-total').textContent = fmt(sum(monthEntries().filter(e => e.paid))) + '원';
+    $('#pending-total').textContent = fmt(sum(monthEntries().filter(e => !e.paid))) + '원';
+    const next = LEVELS[li + 1], allTotal = sum(state.entries);
+    $('#next-level').textContent = next ? `${next.emoji} 다음 레벨까지 ${shortWon(next.min - allTotal)}원` : '👑 전설의 농부 · 최고 레벨 달성';
+    $('#xp-fill').style.width = (next ? clamp((allTotal - lv.min) / (next.min - lv.min) * 100, 0, 100) : 100) + '%';
     if (state.goal > 0) {
       const pct = m / state.goal * 100;
       el.goalFill.style.width = clamp(pct, 0, 100) + '%';
@@ -313,24 +350,29 @@
   function makeBlock(e) {
     const c = catOf(e.cat), h = blockHeight(e.amount);
     const b = document.createElement('div');
-    b.className = 'block' + (h >= 78 ? ' tall' : '');
+    b.className = 'block skin-' + (e.skin || 'soft');
+    b.tabIndex = 0; b.setAttribute('role', 'button');
+    b.setAttribute('aria-label', `${e.name}, ${fmt(e.amount)}원, ${e.paid ? '입금 완료' : '입금 대기'}, 수정`);
     b.dataset.id = e.id;
-    b.style.setProperty('--c', c.color);
+    b.style.setProperty('--c', TINTS[e.tint] || c.color);
     b.style.height = h + 'px';
     b.title = `${e.name} · ${fmt(e.amount)}원${e.memo ? ' · ' + e.memo : ''}`;
-    b.innerHTML = `<span class="b-emoji">${c.emoji}</span><span class="b-name">${esc(e.name)}</span><span class="b-amt">${fmt(e.amount)}</span><div class="b-hold"></div>`;
+    b.innerHTML = `<span class="b-emoji">${c.emoji}</span><span class="b-name">${esc(e.name)}</span><span class="b-amt">${fmt(e.amount)}<small>원</small></span>${e.paid ? '<span class="paid-mark" aria-hidden="true">✓</span>' : ''}<div class="b-hold"></div>`;
     return b;
   }
   function renderTower({ stagger = false, dropId = null } = {}) {
     const list = filtered();
     el.tower.innerHTML = '';
-    for (let i = list.length - 1, k = 0; i >= 0; i--, k++) {
+    for (let i = 0, k = 0; i < list.length; i++, k++) {
       const b = makeBlock(list[i]);
       if (dropId === list[i].id) b.classList.add('drop');
       else if (stagger) { b.classList.add('rise'); b.style.animationDelay = Math.min(k, 14) * 35 + 'ms'; }
       el.tower.appendChild(b);
     }
     el.emptyHint.hidden = list.length > 0;
+    $('#result-count').textContent = list.length;
+    el.emptyHint.querySelector('p').textContent = state.entries.length ? '조건에 맞는 블록이 없어요' : '첫 블록을 쌓아보세요!';
+    el.emptyHint.querySelector('small').innerHTML = state.entries.length ? '검색어나 필터를 바꾸면<br>다른 블록을 볼 수 있어요' : '아래 <b>+</b> 버튼으로 활동을 추가하면<br>나만의 농장이 자라납니다';
     el.towerWrap.classList.toggle('show-hint', list.length > 0 && list.length < 4);
     el.tower.scrollTop = 0;
   }
@@ -396,13 +438,14 @@
   // Add / edit / destroy
   // ============================================================
   function addEntry(entry) {
+    if (!canEdit()) return;
     const before = levelIndex(sum(state.entries));
     const monthBefore = sum(monthEntries());
     state.entries.push(entry); state.lastCat = entry.cat; save();
 
-    if (inPeriod(entry, state.period)) {
-      const b = makeBlock(entry); b.classList.add('drop');
-      el.tower.prepend(b); el.tower.scrollTop = 0;
+    if (matches(entry)) {
+      renderTower({ dropId: entry.id });
+      const b = el.tower.querySelector(`[data-id="${entry.id}"]`);
       el.emptyHint.hidden = true;
       setTimeout(() => {
         el.towerWrap.classList.remove('thud'); void el.towerWrap.offsetWidth; el.towerWrap.classList.add('thud');
@@ -414,7 +457,7 @@
       renderScore(true, entry.amount);
     } else {
       renderScore(true);
-      toast(`"${PERIOD_LABEL[state.period]}" 필터 밖의 날짜라 탑에는 보이지 않아요`);
+      toast('저장했어요. 현재 검색·필터 조건 밖의 블록입니다');
     }
     sfx.pop(); setTimeout(() => sfx.coin(), 550);
     el.levelEmoji.classList.remove('bounce'); void el.levelEmoji.offsetWidth; el.levelEmoji.classList.add('bounce');
@@ -431,6 +474,7 @@
   }
 
   function updateEntry(id, patch) {
+    if (!canEdit()) return;
     const e = state.entries.find(x => x.id === id); if (!e) return;
     const delta = (patch.amount ?? e.amount) - e.amount;
     Object.assign(e, patch); save();
@@ -449,6 +493,7 @@
   }
 
   function destroyBlock(id, { silent = false } = {}) {
+    if (!canEdit()) return;
     const idx = state.entries.findIndex(e => e.id === id); if (idx < 0) return;
     const entry = state.entries[idx];
     state.entries.splice(idx, 1); save();
@@ -456,15 +501,17 @@
     if (b) shatter(b, entry);
     sfx.crash(); vibrate([50, 30, 100]);
     renderScore(true, -entry.amount); renderSide();
+    $('#result-count').textContent = filtered().length;
     el.emptyHint.hidden = filtered().length > 0;
     if (!silent) toast(`💥 "${esc(entry.name)}" 파괴 · -${fmt(entry.amount)}원`, {
       action: '되돌리기',
-      onAction() { state.entries.splice(Math.min(idx, state.entries.length), 0, entry); save(); renderAll({ dropId: entry.id }); renderScore(true, entry.amount); sfx.pop(); toast('↩️ 블록을 복구했어요'); },
+      onAction() { if (!canEdit()) return; if (!state.entries.some(e => e.id === entry.id)) state.entries.splice(Math.min(idx, state.entries.length), 0, entry); save(); renderAll({ dropId: entry.id }); renderScore(true, entry.amount); sfx.pop(); toast('↩️ 블록을 복구했어요'); },
     });
   }
 
   function shatter(b, entry) {
-    const color = catOf(entry.cat).color;
+    if (reducedMotion()) { b.remove(); return; }
+    const color = TINTS[entry.tint] || catOf(entry.cat).color;
     const r = b.getBoundingClientRect(), wr = el.towerWrap.getBoundingClientRect();
     const cols = 4, rows = clamp(Math.round(r.height / 20), 2, 6);
     const w = r.width / cols, h = r.height / rows;
@@ -526,6 +573,10 @@
   window.addEventListener('pointercancel', cancelHold);
   el.tower.addEventListener('scroll', cancelHold, { passive: true });
   el.tower.addEventListener('contextmenu', e => e.preventDefault());
+  el.tower.addEventListener('keydown', e => {
+    const block = e.target.closest('.block');
+    if (block && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openEdit(block.dataset.id); }
+  });
   window.addEventListener('blur', cancelHold);
 
   el.history.addEventListener('click', ev => {
@@ -537,7 +588,7 @@
   // ============================================================
   // Add / edit form
   // ============================================================
-  let editingId = null, selectedCat = state.lastCat || 'freelance';
+  let editingId = null, editingSnapshot = null, selectedCat = state.lastCat || 'freelance';
   el.catPicker.innerHTML = CATEGORIES.map(c => `<button type="button" data-cat="${c.id}" style="--c:${c.color}"><i></i>${c.emoji} ${c.name}</button>`).join('');
   const syncCat = () => $$('button', el.catPicker).forEach(b => b.classList.toggle('active', b.dataset.cat === selectedCat));
   el.catPicker.addEventListener('click', ev => {
@@ -555,29 +606,39 @@
   $$('.quick-amts button[data-goal]').forEach(b => b.addEventListener('click', () => { el.inGoal.value = fmt(Number(b.dataset.goal)); sfx.coin(); }));
 
   function openAdd() {
+    if (!canEdit()) return;
     editingId = null; selectedCat = state.lastCat || 'freelance'; syncCat();
     el.sheetTitle.textContent = '활동 추가'; el.btnSubmit.textContent = '🧱 블록 쌓기'; el.btnDelete.hidden = true;
     el.form.reset(); el.inDate.value = todayStr();
+    $('#in-skin').value = ['soft', 'pixel', 'stripe', 'gem'][state.entries.length % 4];
     openSheet(el.sheetAdd);
     setTimeout(() => el.inName.focus({ preventScroll: true }), 350);
   }
   function openEdit(id) {
+    if (!canEdit()) return;
     const e = state.entries.find(x => x.id === id); if (!e) return;
     editingId = id; selectedCat = e.cat; syncCat();
+    editingSnapshot = JSON.stringify(e);
     el.sheetTitle.textContent = '블록 수정'; el.btnSubmit.textContent = '💾 저장'; el.btnDelete.hidden = false;
     el.inName.value = e.name; el.inAmount.value = fmt(e.amount); el.inDate.value = e.date; el.inMemo.value = e.memo || '';
+    $('#in-skin').value = e.skin || 'soft'; $('#in-paid').value = e.paid ? 'paid' : 'pending';
+    $('#in-tint').value = e.tint || 'category';
     openSheet(el.sheetAdd);
   }
   el.form.addEventListener('submit', ev => {
     ev.preventDefault();
+    if (!canEdit()) return;
+    if (editingId && JSON.stringify(state.entries.find(e => e.id === editingId)) !== editingSnapshot) { toast('다른 기기에서 이 블록이 변경됐어요. 닫고 다시 열어 최신 내용을 확인해 주세요', { duration: 5000 }); return; }
     const name = el.inName.value.trim(), amount = parseAmount(el.inAmount.value);
     if (!name) { el.inName.focus(); return; }
     if (amount <= 0) { el.inAmount.focus(); toast('예상 수입을 입력해 주세요'); return; }
     if (amount > 9999999999) { toast('금액이 너무 커요 (최대 99억)'); return; }
     const date = el.inDate.value || todayStr(), memo = el.inMemo.value.trim();
+    const paid = $('#in-paid').value === 'paid', skin = $('#in-skin').value, tint = $('#in-tint').value;
+    try { FarmData.clean({ entries: [{ id: editingId || uid(), name, amount, date, memo }], goal: 0 }); } catch (error) { toast(error.message); return; }
     closeSheet();
-    if (editingId) updateEntry(editingId, { name, amount, date, memo, cat: selectedCat });
-    else addEntry({ id: uid(), name, amount, date, memo, cat: selectedCat, createdAt: Date.now() });
+    if (editingId) updateEntry(editingId, { name, amount, date, memo, paid, skin, tint, cat: selectedCat });
+    else addEntry({ id: uid(), name, amount, date, memo, paid, skin, tint, cat: selectedCat, createdAt: Date.now() });
   });
   el.btnCancel.addEventListener('click', closeSheet);
   el.btnDelete.addEventListener('click', () => { const id = editingId; closeSheet(); if (id) setTimeout(() => destroyBlock(id), 200); });
@@ -589,6 +650,8 @@
   $('#m-goal').addEventListener('click', openGoal);
   el.formGoal.addEventListener('submit', ev => {
     ev.preventDefault();
+    if (!canEdit()) return;
+    if (parseAmount(el.inGoal.value) > 9999999999) { toast('목표 금액은 최대 99억까지 설정할 수 있어요'); return; }
     state.goal = parseAmount(el.inGoal.value); save(); closeSheet();
     renderScore(false); sfx.coin();
     toast(state.goal ? `🎯 목표 ${fmt(state.goal)}원 설정!` : '목표를 해제했어요');
@@ -646,21 +709,21 @@
   $('#m-import').addEventListener('click', () => el.fileImport.click());
   el.fileImport.addEventListener('change', async () => {
     const f = el.fileImport.files[0]; el.fileImport.value = ''; if (!f) return;
+    if (!canEdit()) return;
+    if (f.size > 10000000) { toast('10MB 이하의 JSON 파일을 선택해 주세요'); return; }
     try {
-      const data = JSON.parse(await f.text());
-      if (!Array.isArray(data.entries)) throw new Error('bad');
-      const clean = data.entries.filter(e => e && e.name && e.amount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '')).map(e => ({
-        id: e.id || uid(), name: String(e.name).slice(0, 40), amount: Math.round(e.amount), date: e.date, memo: String(e.memo || '').slice(0, 60), cat: catOf(e.cat).id, createdAt: e.createdAt || Date.now(),
-      }));
-      const merge = state.entries.length ? confirm(`${clean.length}개 블록을 불러옵니다.\n\n[확인] 기존 데이터에 합치기\n[취소] 기존 데이터를 덮어쓰기`) : false;
-      if (merge) { const ids = new Set(state.entries.map(e => e.id)); clean.forEach(e => { if (!ids.has(e.id)) state.entries.push(e); }); }
-      else state.entries = clean;
-      if (typeof data.goal === 'number' && !merge) state.goal = data.goal;
+      const data = FarmData.clean(JSON.parse(await f.text())), clean = data.entries;
+      if (!canEdit()) return;
+      if (!confirm(`${clean.length}개 블록을 기존 기록에 합칠까요? 같은 ID의 기록은 유지됩니다. 취소하면 변경하지 않습니다.`)) return;
+      const wasEmpty = !state.entries.length, ids = new Set(state.entries.map(e => e.id));
+      clean.forEach(e => { if (!ids.has(e.id)) { state.entries.push(e); ids.add(e.id); } });
+      if (wasEmpty && !state.goal) state.goal = data.goal;
       save(); closeSheet(); renderAll({ stagger: true }); sfx.fanfare();
       toast(`📥 ${clean.length}개 블록을 불러왔어요`);
     } catch (_) { toast('⚠️ 올바른 Income Farm JSON 파일이 아니에요'); }
   });
   $('#m-sample').addEventListener('click', () => {
+    if (!canEdit()) return;
     closeSheet();
     const names = [['로고 디자인 외주', 'freelance', 350000], ['온라인 강의 1회', 'lecture', 150000], ['중고 카메라 판매', 'sales', 420000], ['유튜브 광고 수익', 'content', 88000],
       ['배당금', 'invest', 62000], ['주말 카페 알바', 'parttime', 96000], ['블로그 체험단', 'content', 50000], ['웹사이트 유지보수', 'freelance', 200000], ['전자책 판매', 'sales', 34000], ['멘토링 세션', 'lecture', 120000]];
@@ -668,19 +731,108 @@
     const addNext = () => {
       if (i >= names.length) { toast('✨ 샘플 블록 10개를 쌓았어요'); return; }
       const [name, cat, amount] = names[i]; const d = new Date(); d.setDate(d.getDate() - Math.floor(Math.random() * 12));
-      addEntry({ id: uid(), name, amount, date: localISO(d), memo: '샘플', cat, createdAt: Date.now() - (names.length - i) * 1000 });
+      addEntry({ id: uid(), name, amount, date: localISO(d), memo: '샘플', cat, paid: i % 3 === 0, skin: ['soft', 'pixel', 'stripe', 'gem'][i % 4], createdAt: Date.now() - (names.length - i) * 1000 });
       i++; setTimeout(addNext, 380);
     };
     addNext();
   });
   $('#m-reset').addEventListener('click', () => {
+    if (!canEdit()) return;
     if (!state.entries.length) { toast('삭제할 데이터가 없어요'); closeSheet(); return; }
     if (!confirm(`정말 모든 블록(${state.entries.length}개)을 삭제할까요?\n이 작업은 되돌릴 수 없어요.`)) return;
     const blocks = $$('.block', el.tower);
     closeSheet();
     blocks.forEach((b, k) => setTimeout(() => { const e = state.entries.find(x => x.id === b.dataset.id); if (e) shatter(b, e); }, k * 60));
-    setTimeout(() => { state = { ...defaults(), sound: state.sound, period: state.period }; save(); renderAll(); sfx.crash(); toast('🧨 초기화 완료'); }, Math.min(blocks.length * 60, 1500) + 300);
+    state = { ...defaults(), sound: state.sound, period: state.period }; save();
+    setTimeout(() => { renderAll(); sfx.crash(); toast('🧨 초기화 완료'); }, Math.min(blocks.length * 60, 1500) + 300);
   });
+
+  // Search, view preferences and spreadsheet export.
+  $('#filter-cat').insertAdjacentHTML('beforeend', CATEGORIES.map(c => `<option value="${c.id}">${c.emoji} ${c.name}</option>`).join(''));
+  $('#search').addEventListener('input', e => { query = e.target.value.trim().toLocaleLowerCase(); renderAll(); });
+  $('#filter-cat').addEventListener('change', e => { categoryFilter = e.target.value; renderAll(); });
+  $('#filter-paid').addEventListener('change', e => { paidFilter = e.target.value; renderAll(); });
+  $('#sort').addEventListener('change', e => { sortOrder = e.target.value; renderTower(); });
+  $('#density').value = localStorage.getItem('incomefarm:density') === 'comfortable' ? 'comfortable' : 'compact';
+  el.tower.dataset.density = $('#density').value;
+  $('#density').addEventListener('change', e => { el.tower.dataset.density = e.target.value; localStorage.setItem('incomefarm:density', e.target.value); });
+  function updateMotion() {
+    document.body.classList.toggle('reduced-motion', motionOff);
+    $('#btn-motion').textContent = reducedMotion() ? '효과 줄임' : '효과 켜짐';
+    $('#btn-motion').setAttribute('aria-pressed', String(motionOff));
+  }
+  updateMotion();
+  $('#btn-motion').addEventListener('click', () => { motionOff = !motionOff; localStorage.setItem('incomefarm:motion', motionOff ? 'off' : 'on'); updateMotion(); });
+  function download(text, name, type) {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1000);
+  }
+  $('#m-csv').addEventListener('click', () => {
+    // Neutralize spreadsheet formula injection, including leading whitespace.
+    const cell = value => '"' + String(value).replace(/^(\s*[=+@-])/, "'$1").replace(/"/g, '""') + '"';
+    const rows = [['날짜', '활동', '카테고리', '예상 수입(원)', '입금 상태', '메모'], ...filtered().map(e => [e.date, e.name, catOf(e.cat).name, e.amount, e.paid ? '입금 완료' : '입금 대기', e.memo || ''])];
+    download('\uFEFF' + rows.map(row => row.map(cell).join(',')).join('\r\n'), `income-farm-${todayStr()}.csv`, 'text/csv;charset=utf-8');
+    closeSheet(); toast(`${rows.length - 1}개 검색 결과를 내보냈어요`);
+  });
+
+  // Account UI. Guest data stays separate until the user explicitly migrates it.
+  const accountStatus = $('#account-status');
+  $('#btn-account').addEventListener('click', () => openSheet($('#sheet-account')));
+  window.addEventListener('farm:cloud-status', ({ detail: s }) => {
+    $('#btn-account').dataset.kind = s.kind;
+    $('#btn-account').title = s.text;
+    $('#sync-label').textContent = s.email ? (s.kind === 'synced' ? '동기화 완료' : '동기화 상태') : '계정 연결';
+    accountStatus.textContent = s.configured ? s.text : '클라우드 연결 준비 중 · 현재 기록은 이 기기에 저장됩니다. 운영자의 서버 연결 후 로그인할 수 있어요.';
+    $('#storage-note').textContent = s.email ? s.text : '이 기기에 저장 중 · 계정 연결로 동기화';
+    $('#account-email').textContent = s.email;
+    $('#account-actions').hidden = !s.email;
+    $('#form-login').hidden = !!s.email || !$('#form-verify').hidden;
+    if (s.email) $('#form-verify').hidden = true;
+    $('#send-code').disabled = !s.configured;
+  });
+  window.addEventListener('farm:cloud-data', ({ detail }) => {
+    cancelHold(); hideToast();
+    state = { ...defaults(), sound: state.sound, period: state.period, ...detail }; renderAll();
+  });
+  window.addEventListener('farm:signed-out', () => {
+    cancelHold(); hideToast(); state = load(); renderAll(); closeSheet(); toast('로그아웃했어요. 이 기기의 로컬 기록을 표시합니다');
+  });
+  let loginEmail = '';
+  async function accountAction(button, action) {
+    button.disabled = true;
+    try { await action(); } catch (error) { accountStatus.textContent = error.message; }
+    finally { button.disabled = false; }
+  }
+  $('#form-login').addEventListener('submit', e => {
+    e.preventDefault(); loginEmail = $('#login-email').value.trim();
+    accountAction($('#send-code'), async () => {
+      await FarmCloud.sendCode(loginEmail); $('#form-login').hidden = true; $('#form-verify').hidden = false;
+      accountStatus.textContent = '이메일로 인증 코드를 보냈어요. 받은편지함과 스팸함을 확인해 주세요'; $('#login-code').focus();
+    });
+  });
+  $('#change-email').addEventListener('click', () => { $('#form-verify').hidden = true; $('#form-login').hidden = false; $('#login-email').focus(); });
+  $('#form-verify').addEventListener('submit', e => {
+    e.preventDefault(); accountAction(e.submitter, async () => { await FarmCloud.verify(loginEmail, $('#login-code').value.trim()); $('#login-code').value = ''; });
+  });
+  $('#sync-now').addEventListener('click', () => FarmCloud.sync());
+  $('#sign-out').addEventListener('click', e => accountAction(e.currentTarget, () => FarmCloud.signOut()));
+  $('#m-migrate').addEventListener('click', () => {
+    if (!canEdit()) return;
+    const guest = load();
+    if (!guest.entries.length) { accountStatus.textContent = '이 기기에 이전할 로컬 기록이 없어요'; return; }
+    if (!confirm(`이 기기의 ${guest.entries.length}개 기록을 현재 계정에 합칠까요? 원본 로컬 기록은 보관됩니다.`)) return;
+    const ids = new Set(state.entries.map(e => e.id));
+    guest.entries.forEach(e => { if (!ids.has(e.id)) { state.entries.push(e); ids.add(e.id); } });
+    if (!state.goal) state.goal = guest.goal;
+    save(); renderAll(); accountStatus.textContent = '기존 기록을 합쳤어요. 서버 저장 상태를 확인해 주세요';
+  });
+  $('#cloud-reload').addEventListener('click', e => {
+    if (!confirm('이 기기의 현재 기록을 JSON 파일로 백업한 뒤 서버 기록을 불러올까요? 아직 서버에 저장되지 않은 수정은 백업 파일에 남습니다.')) return;
+    download(JSON.stringify({ app: 'income-farm', ...state }, null, 2), `income-farm-conflict-${todayStr()}.json`, 'application/json');
+    accountAction(e.currentTarget, () => FarmCloud.useCloud());
+  });
+  FarmCloud.init().catch(() => { accountStatus.textContent = '계정 연결에 실패했어요. 새로고침해 주세요'; });
 
   // ============================================================
   // PWA install

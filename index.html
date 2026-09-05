@@ -2,10 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Income Farm</title>
   <meta name="description" content="활동 내역과 예상 수입을 컬러 블록으로 쌓아 보는 게임형 수입 대시보드">
-  <meta name="theme-color" content="#0f0c29">
+  <meta name="theme-color" content="#0c1417">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
   <div class="bg" aria-hidden="true">
@@ -36,6 +37,7 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="btn-account" class="account-btn" aria-label="계정 및 동기화"><span class="sync-dot"></span><span id="sync-label">계정 연결</span></button>
         <button id="btn-sound" class="icon-btn" aria-label="사운드 켜기/끄기" title="사운드">🔊</button>
         <button id="btn-install" class="icon-btn install-btn" aria-label="앱으로 설치" title="앱으로 설치">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -51,6 +53,7 @@
       </div>
     </header>
 
+    <div class="page-heading"><div><span class="eyebrow">YOUR LITTLE INCOME WORLD</span><h2>오늘의 노력이, 내일의 수입으로.</h2><p>작은 성취를 쌓아 나만의 농장을 키워보세요.</p></div><span class="season-badge">✦ GROW EVERY DAY</span></div>
     <section class="scoreboard" id="scoreboard">
       <div class="score-main">
         <div class="score-label">누적 예상 수입 <span class="chip" id="period-label">전체</span></div>
@@ -71,16 +74,18 @@
       </div>
     </section>
 
-    <nav class="period-tabs" id="period-tabs" aria-label="기간 필터">
+    <div class="workspace-toolbar"><nav class="period-tabs" id="period-tabs" aria-label="기간 필터">
       <button data-period="all" class="active">전체</button>
       <button data-period="today">오늘</button>
       <button data-period="week">이번 주</button>
       <button data-period="month">이번 달</button>
       <span class="tab-indicator"></span>
-    </nav>
+    </nav><div class="view-options"><label for="density">블록 크기</label><select id="density"><option value="compact">작게</option><option value="comfortable">보통</option></select><button id="btn-motion" class="small-btn" aria-pressed="false">효과 켜짐</button></div></div>
 
     <main class="board">
       <section class="tower-wrap" id="tower-wrap">
+        <div class="board-heading"><div><span class="eyebrow">MY FARM</span><h2>수입 블록 <span id="result-count">0</span></h2></div><span class="board-help">탭하여 수정 · 꾹 눌러 파괴</span></div>
+        <div class="filters"><input id="search" type="search" placeholder="활동·메모 검색" aria-label="활동 또는 메모 검색"><select id="filter-cat" aria-label="카테고리 필터"><option value="all">모든 카테고리</option></select><select id="filter-paid" aria-label="입금 상태 필터"><option value="all">모든 상태</option><option value="pending">입금 대기</option><option value="paid">입금 완료</option></select><select id="sort" aria-label="블록 정렬"><option value="newest">최신순</option><option value="amount">금액순</option><option value="oldest">오래된순</option></select></div>
         <div class="tower-sky"></div>
         <div id="tower" class="tower"></div>
         <div class="ground"><div class="grass"></div></div>
@@ -93,6 +98,7 @@
       </section>
 
       <aside class="side" id="side">
+        <div class="card harvest-card"><span class="eyebrow">THIS MONTH</span><h3>이번 달 수확</h3><strong id="paid-total">0원</strong><p>입금 완료</p><div class="harvest-line"><span>입금 대기</span><b id="pending-total">0원</b></div><div class="xp-track"><i id="xp-fill"></i></div><small id="next-level">첫 블록으로 시작하세요</small></div>
         <div class="card">
           <h3>최근 7일</h3>
           <div class="spark" id="spark"></div>
@@ -155,6 +161,8 @@
           <input id="in-memo" type="text" maxlength="60" placeholder="선택">
         </label>
       </div>
+      <div class="row"><label class="field"><span>블록 디자인</span><select id="in-skin"><option value="soft">소프트 · 둥근 블록</option><option value="pixel">픽셀 · 게임 블록</option><option value="stripe">스트라이프 · 패턴</option><option value="gem">젬 · 반짝이는 보석</option></select></label><label class="field"><span>입금 상태</span><select id="in-paid"><option value="pending">입금 대기</option><option value="paid">입금 완료 ✓</option></select></label></div>
+      <label class="field"><span>블록 컬러</span><select id="in-tint"><option value="category">카테고리 기본 컬러</option><option value="lilac">라일락</option><option value="mint">민트</option><option value="sky">스카이</option><option value="peach">피치</option><option value="lemon">레몬</option><option value="rose">로즈</option></select></label>
       <div class="sheet-actions">
         <button type="button" id="btn-delete" class="btn danger" hidden>🗑 파괴</button>
         <button type="button" id="btn-cancel" class="btn ghost">취소</button>
@@ -171,12 +179,13 @@
       <li><button id="m-goal">🎯 <span>이번 달 목표 설정</span></button></li>
       <li><button id="m-share">📤 <span>요약 공유하기</span></button></li>
       <li><button id="m-export">💾 <span>데이터 내보내기 (JSON)</span></button></li>
+      <li><button id="m-csv">📊 <span>검색 결과 내보내기 (CSV)</span></button></li>
       <li><button id="m-import">📥 <span>데이터 가져오기</span></button></li>
       <li><button id="m-install">📱 <span>앱으로 설치</span></button></li>
       <li><button id="m-sample">✨ <span>샘플 데이터 넣어보기</span></button></li>
       <li><button id="m-reset" class="danger">🧨 <span>전체 초기화</span></button></li>
     </ul>
-    <p class="menu-foot">Income Farm <span id="app-version"></span> · 데이터는 이 기기에만 저장됩니다</p>
+    <p class="menu-foot">Income Farm <span id="app-version"></span> · <span id="storage-note">이 기기에 저장 중</span></p>
     <input type="file" id="file-import" accept="application/json,.json" hidden>
   </div>
 
@@ -216,6 +225,15 @@
   </div>
 
   <!-- 레벨업 오버레이 -->
+  <div id="sheet-account" class="sheet" role="dialog" aria-modal="true" aria-labelledby="account-title">
+    <div class="sheet-handle"></div><h2 id="account-title">어디서나 같은 나의 농장</h2>
+    <p class="account-description">다른 기기의 웹사이트와 설치 앱에서도 같은 이메일로 로그인하면 기록과 목표가 연결됩니다.</p>
+    <p id="account-status" role="status" class="account-status"></p>
+    <form id="form-login"><label class="field"><span>이메일</span><input id="login-email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="btn primary" id="send-code" type="submit">로그인 코드 받기</button></form>
+    <form id="form-verify" hidden><label class="field"><span>이메일로 받은 인증 코드</span><input id="login-code" type="text" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6,10}" minlength="6" maxlength="10" placeholder="인증 코드"></label><button class="btn primary" type="submit">로그인</button><button class="small-btn" id="change-email" type="button">이메일 다시 입력</button></form>
+    <div id="account-actions" hidden><p id="account-email"></p><button id="sync-now" class="btn">지금 동기화</button><button id="m-migrate" class="btn">이 기기의 기존 기록 합치기</button><p class="account-description">기존 로컬 기록은 자동으로 업로드하지 않습니다. 합치기를 선택하면 현재 계정으로 복사합니다.</p><button id="cloud-reload" class="small-btn">충돌 해결: 서버 기록 다시 불러오기</button><button id="sign-out" class="small-btn">로그아웃</button></div>
+    <div class="sheet-actions"><button class="btn ghost" data-close>닫기</button></div>
+  </div>
   <div id="levelup" class="levelup" aria-live="polite">
     <div class="levelup-card">
       <div class="levelup-emoji" id="levelup-emoji">🌱</div>
@@ -227,6 +245,8 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <canvas id="fx" class="fx" aria-hidden="true"></canvas>
 
+  <script src="js/data.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,9 +1,12 @@
 /* Income Farm service worker — offline-first app shell */
-const VERSION = 'income-farm-v1.0.0';
+const VERSION = 'income-farm-v2.0.0';
 const SHELL = [
   './',
   './index.html',
   './css/style.css',
+  './css/dashboard.css',
+  './js/data.js',
+  './js/cloud.js',
   './js/app.js',
   './manifest.webmanifest',
   './icons/icon.svg',
@@ -24,7 +27,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('income-farm-') && k !== VERSION && k !== VERSION + '-fonts').map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -33,6 +36,7 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.pathname.startsWith('/api/')) return;
 
   // Google Fonts: stale-while-revalidate
   if (url.hostname.endsWith('googleapis.com') || url.hostname.endsWith('gstatic.com')) {
